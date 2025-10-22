@@ -1,44 +1,40 @@
-name: kind CI/CD
+name: Kubernetes Kind CI Test
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
+on: [push, pull_request]
 
 jobs:
   kind-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: ⬇️ Checkout code
+        # Required to get deployment.yaml onto the runner
+        uses: actions/checkout@v4 
 
-      # Setup kind cluster using a popular GitHub Action
-      - name: Create Kubernetes KinD Cluster
-        # You can specify a version, config file, node image, etc.
-        uses: helm/kind-action@v1
-        with:
-          node_image: kindest/node:v1.30.0 # Specify a Kubernetes version
+      - name: 🛠 Setup Kind Cluster
+        # This action automatically installs kind, kubectl, and creates a cluster
+        uses: helm/kind-action@v1 
 
-      - name: Check Cluster Status
-        run: |
-          kubectl cluster-info
-          kubectl get nodes
-          
-      # Example: Deploy a manifest to the cluster
-      # Assuming you have a file named deployment.yaml in your repo
-      - name: Deploy Application
+      - name: 🚀 Apply Deployment Manifest
+        # Apply the deployment.yaml from the root of the repository
         run: kubectl apply -f deployment.yaml
 
-      # Example: Wait for deployment to be ready
-      - name: Wait for Deployment
-        run: kubectl rollout status deployment/my-app -n default --timeout=5m
-        
-      # Example: Run tests against the cluster
-      - name: Run Integration Tests
-        run: echo "Running tests..."
-        # Replace 'echo' with your actual test command, e.g., 'go test ./...'
+      - name: ✅ Wait for Deployment to be Ready
+        # Waits until the Deployment has the desired number of replicas running
+        # NOTE: This uses the 'name' from the deployment.yaml: ci-test-deployment
+        run: kubectl rollout status deployment/ci-test-deployment --timeout=5m
 
-      - name: Cleanup (Automatically done by kind-action, but good to know the command)
-        if: always() # Run cleanup even if previous steps failed
-        run: kind delete cluster
+      - name: 🔍 Get NodePort for Service
+        # Retrieves the random NodePort assigned by Kubernetes
+        id: get_port
+        run: |
+          NODE_PORT=$(kubectl get svc ci-test-service -o=jsonpath='{.spec.ports[0].nodePort}')
+          echo "NODE_PORT=$NODE_PORT" >> $GITHUB_OUTPUT
+          echo "Service exposed on NodePort: $NODE_PORT"
+          
+      - name: 🧪 Test Application Endpoint
+        # Uses curl to hit the exposed port (on localhost:NodePort) and check for a 200 OK
+        run: |
+          NODE_PORT=${{ steps.get_port.outputs.NODE_PORT }}
+          echo "Curling http://127.0.0.1:$NODE_PORT"
+          # Check for 'HTTP/1.1 200 OK' in the response headers
+          curl -sI http://127.0.0.1:$NODE_PORT | head -n 1 | grep 'HTTP/1.1 200 OK'
