@@ -1,9 +1,9 @@
 name: Kubernetes Kind CI Test
 
 on:
-  # FIX: Correct YAML for defining triggers
+  # CORRECT YAML STRUCTURE FOR TRIGGERS
   push:
-    branches: [ main ] # Ensure this matches your branch name
+    branches: [ main ] # Ensure this matches your primary branch
   pull_request:
     branches: [ main ]
   workflow_dispatch: # Allows manual running from the GitHub UI
@@ -47,12 +47,13 @@ jobs:
           kubectl describe deployment ci-test-deployment
 
       # ----------------------------------------------
-      # 3. Robust Testing (DEBUGGING VERSION)
+      # 3. Robust Testing (FINAL VERSION)
       # ----------------------------------------------
-      # Use the script block from the top of this answer:
-      - name: 🧪 Test Application Endpoint with Retry (DEBUGGING)
-        run: |
-          NODE_PORT=${{ steps.get_port.outputs.NODE_PORT }}
+      - name: 🧪 Test Application Endpoint with Retry (FIXED)
+        # FIX: run: must be indented two spaces from - name:
+        run: | 
+          NODE_PORT=${{ steps.get_port.outputs.NODE_PORT }} 
+          
           MAX_RETRIES=12  
           RETRY_DELAY=10 
           URL="http://127.0.0.1:$NODE_PORT"
@@ -63,6 +64,7 @@ jobs:
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Curling $URL"
             
+            # This status capture prevents the script from failing on curl Exit Code 7
             STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
             
             if [ "$STATUS_CODE" == "200" ]; then
@@ -73,6 +75,7 @@ jobs:
               
               if [ "$STATUS_CODE" == "000" ]; then
                 echo "--- VERBOSE CURL DEBUG ---"
+                # Use || true to explicitly ignore the exit code of this debug command
                 curl -v "$URL" || true 
                 echo "--------------------------"
               fi
