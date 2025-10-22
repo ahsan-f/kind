@@ -31,7 +31,7 @@ jobs:
           echo "NODE_PORT=$NODE_PORT" >> $GITHUB_OUTPUT
           echo "Service exposed on NodePort: $NODE_PORT"
           
-      - name: 🔎 Debug: Check Pods and Service Status 👈 NEW STEP
+      - name: 🔎 Debug:Check Pods and Service Status 👈 NEW STEP
         # This will provide critical output if the curl fails again
         run: |
           echo "--- PODS STATUS ---"
