@@ -1,26 +1,27 @@
 ---
-# 1. Deployment: Defines the desired state for your application (i.e., the NGINX Pods)
+# 1. Deployment: Manages the application pods
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kind-test-deployment
+  # This is the name you must use in all kubectl commands
+  name: ci-test-deployment 
   labels:
-    app: kind-test
+    app: kind-ci-test
 spec:
   # Run 2 replicas of the application
   replicas: 2
   selector:
     matchLabels:
-      app: kind-test
+      app: kind-ci-test
   template:
     metadata:
       labels:
-        app: kind-test
+        app: kind-ci-test
     spec:
       containers:
       - name: nginx
         # A small, stable, and widely available image
-        image: nginx:latest
+        image: nginx:latest 
         ports:
         - containerPort: 80
 ---
@@ -28,16 +29,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kind-test-service
+  name: ci-test-service
 spec:
-  # Selects the Pods with the label 'app: kind-test'
+  # Selects the Pods created by the Deployment
   selector:
-    app: kind-test
+    app: kind-ci-test
   ports:
     - protocol: TCP
-      # The port the service itself listens on
       port: 80
-      # The port the Pod container exposes
       targetPort: 80
-  # NodePort is a simple way to expose the Service externally for testing
+  # NodePort allows external access (required for kind CI testing)
   type: NodePort
