@@ -1,0 +1,44 @@
+name: kind CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  kind-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Setup kind cluster using a popular GitHub Action
+      - name: Create Kubernetes KinD Cluster
+        # You can specify a version, config file, node image, etc.
+        uses: helm/kind-action@v1
+        with:
+          node_image: kindest/node:v1.30.0 # Specify a Kubernetes version
+
+      - name: Check Cluster Status
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+          
+      # Example: Deploy a manifest to the cluster
+      # Assuming you have a file named deployment.yaml in your repo
+      - name: Deploy Application
+        run: kubectl apply -f deployment.yaml
+
+      # Example: Wait for deployment to be ready
+      - name: Wait for Deployment
+        run: kubectl rollout status deployment/my-app -n default --timeout=5m
+        
+      # Example: Run tests against the cluster
+      - name: Run Integration Tests
+        run: echo "Running tests..."
+        # Replace 'echo' with your actual test command, e.g., 'go test ./...'
+
+      - name: Cleanup (Automatically done by kind-action, but good to know the command)
+        if: always() # Run cleanup even if previous steps failed
+        run: kind delete cluster
