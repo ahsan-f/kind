@@ -1,11 +1,12 @@
 name: Kubernetes Kind CI Test
 
 on:
+  # FIX: Correct YAML for defining triggers
   push:
-    branches: [ main ] # Or your primary branch
+    branches: [ main ] # Ensure this matches your branch name
   pull_request:
     branches: [ main ]
-  workflow_dispatch: # <--- CORRECTLY INDENTED AND DEFINED
+  workflow_dispatch: # Allows manual running from the GitHub UI
 
 jobs:
   kind-test:
@@ -36,8 +37,7 @@ jobs:
           echo "NODE_PORT=$NODE_PORT" >> $GITHUB_OUTPUT
           echo "Service exposed on NodePort: $NODE_PORT"
           
-      - name: 🔎 Debug:Check Pods and Service Status
-        # This will provide critical output if the curl fails again
+      - name: 🔎 Debug: Check Pods and Service Status
         run: |
           echo "--- PODS STATUS ---"
           kubectl get pods -o wide
@@ -47,15 +47,14 @@ jobs:
           kubectl describe deployment ci-test-deployment
 
       # ----------------------------------------------
-      # 3. Robust Testing (with Increased Retry)
+      # 3. Robust Testing (DEBUGGING VERSION)
       # ----------------------------------------------
-      - name: 🧪 Test Application Endpoint with Retry
+      # Use the script block from the top of this answer:
+      - name: 🧪 Test Application Endpoint with Retry (DEBUGGING)
         run: |
           NODE_PORT=${{ steps.get_port.outputs.NODE_PORT }}
-          
           MAX_RETRIES=12  
           RETRY_DELAY=10 
-          
           URL="http://127.0.0.1:$NODE_PORT"
           RETRY_COUNT=0
           
@@ -71,6 +70,13 @@ jobs:
               exit 0 
             else
               echo "❌ Received status code $STATUS_CODE (Expected 200). Retrying in $RETRY_DELAY seconds..."
+              
+              if [ "$STATUS_CODE" == "000" ]; then
+                echo "--- VERBOSE CURL DEBUG ---"
+                curl -v "$URL" || true 
+                echo "--------------------------"
+              fi
+
               RETRY_COUNT=$((RETRY_COUNT + 1))
               sleep $RETRY_DELAY
             fi
