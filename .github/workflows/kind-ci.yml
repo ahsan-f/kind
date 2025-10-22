@@ -1,7 +1,12 @@
 name: Kubernetes Kind CI Test
 
-on: [push, pull_request]
-workflow_dispatch:
+on:
+  push:
+    branches: [ main ] # Or your primary branch
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: # <--- CORRECTLY INDENTED AND DEFINED
+
 jobs:
   kind-test:
     runs-on: ubuntu-latest
@@ -31,7 +36,7 @@ jobs:
           echo "NODE_PORT=$NODE_PORT" >> $GITHUB_OUTPUT
           echo "Service exposed on NodePort: $NODE_PORT"
           
-      - name: 🔎 Debug:Check Pods and Service Status 👈 NEW STEP
+      - name: 🔎 Debug: Check Pods and Service Status
         # This will provide critical output if the curl fails again
         run: |
           echo "--- PODS STATUS ---"
@@ -48,7 +53,6 @@ jobs:
         run: |
           NODE_PORT=${{ steps.get_port.outputs.NODE_PORT }}
           
-          # Increased tolerance for slow startup
           MAX_RETRIES=12  
           RETRY_DELAY=10 
           
@@ -60,7 +64,6 @@ jobs:
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Curling $URL"
             
-            # Use curl to get ONLY the HTTP status code
             STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
             
             if [ "$STATUS_CODE" == "200" ]; then
