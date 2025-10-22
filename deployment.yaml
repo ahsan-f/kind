@@ -1,14 +1,11 @@
 ---
-# 1. Deployment: Manages the application pods
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  # This is the name you must use in all kubectl commands
-  name: ci-test-deployment 
+  name: ci-test-deployment # <-- Must match rollout status command
   labels:
     app: kind-ci-test
 spec:
-  # Run 2 replicas of the application
   replicas: 2
   selector:
     matchLabels:
@@ -20,23 +17,19 @@ spec:
     spec:
       containers:
       - name: nginx
-        # A small, stable, and widely available image
         image: nginx:latest 
         ports:
         - containerPort: 80
 ---
-# 2. Service: Exposes the Deployment's Pods
 apiVersion: v1
 kind: Service
 metadata:
-  name: ci-test-service
+  name: ci-test-service # <-- Must match kubectl get svc command
 spec:
-  # Selects the Pods created by the Deployment
   selector:
     app: kind-ci-test
   ports:
     - protocol: TCP
       port: 80
       targetPort: 80
-  # NodePort allows external access (required for kind CI testing)
   type: NodePort
