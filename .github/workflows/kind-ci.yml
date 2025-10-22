@@ -37,7 +37,7 @@ jobs:
           echo "NODE_PORT=$NODE_PORT" >> $GITHUB_OUTPUT
           echo "Service exposed on NodePort: $NODE_PORT"
           
-      - name: 🔎 Debug: Check Pods and Service Status
+      - name: 🔎 Debug:Check Pods and Service Status
         run: |
           echo "--- PODS STATUS ---"
           kubectl get pods -o wide
