@@ -7,34 +7,66 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: ⬇️ Checkout code
-        # Required to get deployment.yaml onto the runner
+        # Essential step: Downloads your repository files, including deployment.yaml
         uses: actions/checkout@v4 
-
+        
+      # ----------------------------------------------
+      # 1. Cluster Setup
+      # ----------------------------------------------
       - name: 🛠 Setup Kind Cluster
-        # This action automatically installs kind, kubectl, and creates a cluster
+        # Installs kind, kubectl, and creates a cluster named 'kind'
         uses: helm/kind-action@v1 
 
+      # ----------------------------------------------
+      # 2. Deployment
+      # ----------------------------------------------
       - name: 🚀 Apply Deployment Manifest
-        # Apply the deployment.yaml from the root of the repository
+        # Applies the manifest from deployment.yaml (must be in repo root)
         run: kubectl apply -f deployment.yaml
 
-      - name: ✅ Wait for Deployment to be Ready
-        # Waits until the Deployment has the desired number of replicas running
-        # NOTE: This uses the 'name' from the deployment.yaml: ci-test-deployment
+      - name: ✅ Wait for Deployment Rollout
+        # Waits for the Deployment named 'ci-test-deployment' to be fully ready
         run: kubectl rollout status deployment/ci-test-deployment --timeout=5m
 
       - name: 🔍 Get NodePort for Service
-        # Retrieves the random NodePort assigned by Kubernetes
+        # Retrieves the randomly assigned NodePort and stores it for the next step
         id: get_port
         run: |
           NODE_PORT=$(kubectl get svc ci-test-service -o=jsonpath='{.spec.ports[0].nodePort}')
           echo "NODE_PORT=$NODE_PORT" >> $GITHUB_OUTPUT
           echo "Service exposed on NodePort: $NODE_PORT"
           
-      - name: 🧪 Test Application Endpoint
-        # Uses curl to hit the exposed port (on localhost:NodePort) and check for a 200 OK
+      # ----------------------------------------------
+      # 3. Robust Testing (with Retry)
+      # ----------------------------------------------
+      - name: 🧪 Test Application Endpoint with Retry
         run: |
+          # Retrieve the port from the previous step's output
           NODE_PORT=${{ steps.get_port.outputs.NODE_PORT }}
-          echo "Curling http://127.0.0.1:$NODE_PORT"
-          # Check for 'HTTP/1.1 200 OK' in the response headers
-          curl -sI http://127.0.0.1:$NODE_PORT | head -n 1 | grep 'HTTP/1.1 200 OK'
+          
+          MAX_RETRIES=10
+          RETRY_DELAY=5
+          URL="http://127.0.0.1:$NODE_PORT"
+          RETRY_COUNT=0
+          
+          echo "Starting robust connection check to $URL..."
+
+          # Retry loop to wait for the service to become truly available
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Curling $URL"
+            
+            # Use curl to get ONLY the HTTP status code
+            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            
+            if [ "$STATUS_CODE" == "200" ]; then
+              echo "✅ Success! Received HTTP 200 OK from $URL"
+              exit 0 # Exit the script successfully
+            else
+              echo "❌ Received status code $STATUS_CODE (Expected 200). Retrying in $RETRY_DELAY seconds..."
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+              sleep $RETRY_DELAY
+            fi
+          done
+
+          echo "🚨 Error: Application failed to become available after $MAX_RETRIES attempts."
+          exit 1
