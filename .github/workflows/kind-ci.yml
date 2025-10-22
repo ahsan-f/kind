@@ -1,7 +1,7 @@
 name: Kubernetes Kind CI Test
 
 on: [push, pull_request]
-
+workflow_dispatch:
 jobs:
   kind-test:
     runs-on: ubuntu-latest
