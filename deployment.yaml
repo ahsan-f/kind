@@ -1,0 +1,43 @@
+---
+# 1. Deployment: Defines the desired state for your application (i.e., the NGINX Pods)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kind-test-deployment
+  labels:
+    app: kind-test
+spec:
+  # Run 2 replicas of the application
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kind-test
+  template:
+    metadata:
+      labels:
+        app: kind-test
+    spec:
+      containers:
+      - name: nginx
+        # A small, stable, and widely available image
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+---
+# 2. Service: Exposes the Deployment's Pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: kind-test-service
+spec:
+  # Selects the Pods with the label 'app: kind-test'
+  selector:
+    app: kind-test
+  ports:
+    - protocol: TCP
+      # The port the service itself listens on
+      port: 80
+      # The port the Pod container exposes
+      targetPort: 80
+  # NodePort is a simple way to expose the Service externally for testing
+  type: NodePort
