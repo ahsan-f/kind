@@ -1,36 +1,5 @@
-
-kind: Deployment
-metadata:
-  name: ci-test-deployment # <-- Must match rollout status command
-  labels:
-    app: kind-ci-test
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: kind-ci-test
-  template:
-    metadata:
-      labels:
-        app: kind-ci-test
-    spec:
-      containers:
-      - name: nginx
-        image: nginx:latest 
-        ports:
-        - containerPort: 80
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ci-test-service # <-- Must match kubectl get svc command
-spec:
-  selector:
-    app: kind-ci-test
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 80
-      nodePort: 31584  # Fixed to match Kind config mapping
-  type: NodePort
-  
+Run kubectl apply -f deployment.yaml
+  kubectl apply -f deployment.yaml
+  shell: /usr/bin/bash -e {0}
+error: error validating "deployment.yaml": error validating data: apiVersion not set; if you choose to ignore these errors, turn validation off with --validate=false
+Error: Process completed with exit code 1.
