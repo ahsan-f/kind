@@ -1,5 +1,4 @@
----
-apiVersion: apps/v1
+
 kind: Deployment
 metadata:
   name: ci-test-deployment # <-- Must match rollout status command
@@ -32,4 +31,6 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 80
+      nodePort: 31584  # Fixed to match Kind config mapping
   type: NodePort
+  
