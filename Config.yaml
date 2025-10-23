@@ -1,10 +1,11 @@
 
-apiVersion: kind.x-k8s.io/v1alpha4
+kind: Cluster  # This is REQUIRED - must be exactly 'Cluster' (capital C)
+apiVersion: kind.x-k8s.io/v1alpha4  # REQUIRED - matches Kind's schema
 nodes:
 - role: control-plane
   extraPortMappings:
   - containerPort: 31584  # The NodePort inside the Kind container
     hostPort: 31584       # Exposed on host (localhost:31584)
-    listenAddress: "0.0.0.0"
+    listenAddress: "0.0.0.0"  # Listens on all interfaces
     protocol: TCP
-
+    
