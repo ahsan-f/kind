@@ -21,7 +21,7 @@ jobs:
       - name: 🛠 Setup Kind Cluster
         uses: helm/kind-action@v1
         with:
-          config: config.yaml  # Use this to expose NodePorts to host localhost
+          config: Config.yaml  # Use this to expose NodePorts to host localhost
 
       # ----------------------------------------------
       # 2. Deployment
