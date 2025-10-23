@@ -1,4 +1,4 @@
-name: Kubernetes Kind CI Test
+
 
 on:
   # CORRECT YAML STRUCTURE FOR TRIGGERS
@@ -19,7 +19,9 @@ jobs:
       # 1. Cluster Setup
       # ----------------------------------------------
       - name: 🛠 Setup Kind Cluster
-        uses: helm/kind-action@v1 
+        uses: helm/kind-action@v1
+        with:
+          config: kind-config.yaml  # Use this to expose NodePorts to host localhost
 
       # ----------------------------------------------
       # 2. Deployment
@@ -30,6 +32,9 @@ jobs:
       - name: ✅ Wait for Deployment Rollout
         run: kubectl rollout status deployment/ci-test-deployment --timeout=5m
 
+      - name: ⏳ Wait for Pods to be Ready
+        run: kubectl wait --for=condition=Ready pod -l app=kind-ci-test --all --timeout=2m
+
       - name: 🔍 Get NodePort for Service
         id: get_port
         run: |
@@ -37,7 +42,7 @@ jobs:
           echo "NODE_PORT=$NODE_PORT" >> $GITHUB_OUTPUT
           echo "Service exposed on NodePort: $NODE_PORT"
           
-      - name: 🔎 Debug:Check Pods and Service Status
+      - name: 🔎 Debug: Check Pods and Service Status
         run: |
           echo "--- PODS STATUS ---"
           kubectl get pods -o wide
@@ -50,7 +55,6 @@ jobs:
       # 3. Robust Testing (FINAL VERSION)
       # ----------------------------------------------
       - name: 🧪 Test Application Endpoint with Retry (FIXED)
-        # FIX: run: must be indented two spaces from - name:
         run: | 
           NODE_PORT=${{ steps.get_port.outputs.NODE_PORT }} 
           
@@ -64,8 +68,11 @@ jobs:
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
             echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES: Curling $URL"
             
-            # This status capture prevents the script from failing on curl Exit Code 7
-            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+            # Capture status and ignore curl's exit code to allow retries
+            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL" || true)
+            CURL_EXIT=$?  # Log the actual curl exit code for debugging
+            
+            echo "Curl exit code: $CURL_EXIT"
             
             if [ "$STATUS_CODE" == "200" ]; then
               echo "✅ Success! Received HTTP 200 OK from $URL"
@@ -75,7 +82,6 @@ jobs:
               
               if [ "$STATUS_CODE" == "000" ]; then
                 echo "--- VERBOSE CURL DEBUG ---"
-                # Use || true to explicitly ignore the exit code of this debug command
                 curl -v "$URL" || true 
                 echo "--------------------------"
               fi
