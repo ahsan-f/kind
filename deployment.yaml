@@ -1,5 +1,36 @@
-Run kubectl apply -f deployment.yaml
-  kubectl apply -f deployment.yaml
-  shell: /usr/bin/bash -e {0}
-error: error parsing deployment.yaml: error converting YAML to JSON: yaml: line 3: mapping values are not allowed in this context
-Error: Process completed with exit code 1.
+
+kind: Deployment     # REQUIRED
+metadata:
+  name: ci-test-deployment
+  labels:
+    app: kind-ci-test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kind-ci-test
+  template:
+    metadata:
+      labels:
+        app: kind-ci-test
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:latest 
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1  # REQUIRED - For Services
+kind: Service   # REQUIRED
+metadata:
+  name: ci-test-service
+spec:
+  selector:
+    app: kind-ci-test
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 31584  # Fixed for predictability (matches Kind config)
+  type: NodePort
+  
